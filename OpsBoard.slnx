@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpsBoard.Api/OpsBoard.Api.csproj" />
+    <Project Path="src/OpsBoard.AppHost/OpsBoard.AppHost.csproj" />
+    <Project Path="src/OpsBoard.Contracts/OpsBoard.Contracts.csproj" />
+    <Project Path="src/OpsBoard.Data/OpsBoard.Data.csproj" />
+    <Project Path="src/OpsBoard.DataGenerator/OpsBoard.DataGenerator.csproj" />
+    <Project Path="src/OpsBoard.ScenarioRunner/OpsBoard.ScenarioRunner.csproj" />
+    <Project Path="src/OpsBoard.ServiceDefaults/OpsBoard.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpsBoard.IntegrationTests/OpsBoard.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

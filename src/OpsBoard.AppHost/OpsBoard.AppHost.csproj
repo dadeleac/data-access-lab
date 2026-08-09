@@ -1,0 +1,22 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>3242cd39-8de7-43ab-8762-684969d60382</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OpsBoard.Api/OpsBoard.Api.csproj" />
+    <ProjectReference
+      Include="../OpsBoard.Contracts/OpsBoard.Contracts.csproj"
+      IsAspireProjectResource="false" />
+    <ProjectReference Include="../OpsBoard.DataGenerator/OpsBoard.DataGenerator.csproj" />
+    <ProjectReference Include="../OpsBoard.ScenarioRunner/OpsBoard.ScenarioRunner.csproj" />
+  </ItemGroup>
+
+</Project>
