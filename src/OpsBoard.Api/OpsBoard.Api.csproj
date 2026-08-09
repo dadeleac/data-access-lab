@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OpsBoard.Contracts/OpsBoard.Contracts.csproj" />
+    <ProjectReference Include="../OpsBoard.Data/OpsBoard.Data.csproj" />
+    <ProjectReference Include="../OpsBoard.ServiceDefaults/OpsBoard.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

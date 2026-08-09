@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/OpsBoard.Api/OpsBoard.Api.csproj" />
+    <ProjectReference Include="../../src/OpsBoard.Contracts/OpsBoard.Contracts.csproj" />
+    <ProjectReference Include="../../src/OpsBoard.Data/OpsBoard.Data.csproj" />
+    <ProjectReference Include="../../src/OpsBoard.DataGenerator/OpsBoard.DataGenerator.csproj" />
+  </ItemGroup>
+
+</Project>

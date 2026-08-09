@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OpsBoard.Contracts/OpsBoard.Contracts.csproj" />
+    <ProjectReference Include="../OpsBoard.Data/OpsBoard.Data.csproj" />
+    <ProjectReference Include="../OpsBoard.ServiceDefaults/OpsBoard.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
