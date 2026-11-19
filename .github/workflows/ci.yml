@@ -26,6 +26,7 @@ jobs:
       - name: Restore tools and packages
         run: |
           dotnet tool restore
+          (cd src/OpsBoard.Data && dotnet tool restore)
           dotnet restore
 
       - name: Build and test

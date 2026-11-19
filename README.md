@@ -35,6 +35,9 @@ dotnet restore
 dotnet build --no-restore
 ```
 
+Para trabajar con migraciones, ejecuta `dotnet tool restore` y los comandos
+`dotnet ef` desde `src/OpsBoard.Data`, donde está fijada la versión de `dotnet-ef`.
+
 ## Ejecutar
 
 ```bash
