@@ -36,6 +36,6 @@ jobs:
 
       - name: Run both laboratories with PostgreSQL in Aspire
         run: |
-          dotnet dev-certs https --trust
           export SSL_CERT_DIR="${SSL_CERT_DIR:-/etc/ssl/certs}:$HOME/.aspnet/dev-certs/trust"
+          dotnet dev-certs https --trust
           bash .github/scripts/verify-scenarios.sh
