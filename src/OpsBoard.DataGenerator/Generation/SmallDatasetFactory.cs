@@ -6,6 +6,11 @@ namespace OpsBoard.DataGenerator.Generation;
 
 public sealed class SmallDatasetFactory
 {
+    internal const int IncidentCount = 500;
+    internal const int IncidentTagCount = 1_100;
+    internal const int UpdateCount = 4_000;
+    private const int PauseCount = 100;
+
     private static readonly string[] TeamNames =
     [
         "Platform Operations",
@@ -115,13 +120,13 @@ public sealed class SmallDatasetFactory
             (4, 25),
             (10, 25));
 
-        var incidents = new List<Incident>(500);
-        var incidentTags = new List<IncidentTag>(1_100);
-        var updates = new List<IncidentUpdate>(4_000);
-        var pauses = new List<IncidentPause>(100);
+        var incidents = new List<Incident>(IncidentCount);
+        var incidentTags = new List<IncidentTag>(IncidentTagCount);
+        var updates = new List<IncidentUpdate>(UpdateCount);
+        var pauses = new List<IncidentPause>(PauseCount);
         var statusChanges = new List<IncidentStatusChange>(1_440);
 
-        for (var index = 0; index < 500; index++)
+        for (var index = 0; index < IncidentCount; index++)
         {
             var incident = CreateIncident(
                 index,
@@ -575,15 +580,22 @@ public sealed class SmallDatasetFactory
         var candidates = incidents.ToList();
         random.Shuffle(candidates);
 
-        for (var index = 0; index < 100; index++)
+        foreach (var incident in candidates)
         {
-            var incident = candidates[index];
             var terminalTime = LastTerminalTime(incident, referenceTime);
+            var availableTime = terminalTime - incident.CreatedAt;
+
+            if (availableTime <= TimeSpan.FromMinutes(30))
+            {
+                continue;
+            }
+
             var availableMinutes = Math.Max(
                 60,
-                (int)(terminalTime - incident.CreatedAt).TotalMinutes);
+                (int)availableTime.TotalMinutes);
             var startOffset = random.Next(30, Math.Max(31, availableMinutes / 2));
             var startedAt = incident.CreatedAt.AddMinutes(startOffset);
+            var index = pauses.Count;
             var isActive = incident.Status is IncidentStatus.Open or IncidentStatus.Investigating
                 && index % 10 == 0;
             DateTimeOffset? endedAt = isActive
@@ -607,6 +619,11 @@ public sealed class SmallDatasetFactory
 
             incident.Pauses.Add(pause);
             pauses.Add(pause);
+
+            if (pauses.Count == PauseCount)
+            {
+                break;
+            }
         }
     }
 

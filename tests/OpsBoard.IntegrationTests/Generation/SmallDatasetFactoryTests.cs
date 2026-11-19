@@ -60,11 +60,14 @@ public sealed class SmallDatasetFactoryTests
         Assert.NotEqual(first, differentSeed);
     }
 
-    [Fact]
-    public void Generated_incidents_preserve_temporal_and_relational_invariants()
+    [Theory]
+    [InlineData(1729)]
+    [InlineData(1735)]
+    public void Generated_incidents_preserve_temporal_and_relational_invariants(int seed)
     {
-        var dataset = new SmallDatasetFactory().Build(Options);
+        var dataset = new SmallDatasetFactory().Build(Options with { Seed = seed });
 
+        Assert.Equal(100, dataset.Pauses.Count);
         Assert.Equal(
             dataset.Incidents.Count,
             dataset.Incidents.Select(x => x.Number).Distinct().Count());

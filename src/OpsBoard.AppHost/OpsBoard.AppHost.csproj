@@ -1,22 +1,20 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AspireCliInvocationMode>Dnx</AspireCliInvocationMode>
     <UserSecretsId>3242cd39-8de7-43ab-8762-684969d60382</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../OpsBoard.Api/OpsBoard.Api.csproj" />
-    <ProjectReference
-      Include="../OpsBoard.Contracts/OpsBoard.Contracts.csproj"
-      IsAspireProjectResource="false" />
-    <ProjectReference Include="../OpsBoard.DataGenerator/OpsBoard.DataGenerator.csproj" />
-    <ProjectReference Include="../OpsBoard.ScenarioRunner/OpsBoard.ScenarioRunner.csproj" />
+    <ProjectReference Include="../OpsBoard.Contracts/OpsBoard.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

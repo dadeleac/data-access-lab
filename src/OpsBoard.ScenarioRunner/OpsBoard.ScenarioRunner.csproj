@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="../OpsBoard.Contracts/OpsBoard.Contracts.csproj" />
     <ProjectReference Include="../OpsBoard.ServiceDefaults/OpsBoard.ServiceDefaults.csproj" />
+    <InternalsVisibleTo Include="OpsBoard.IntegrationTests" />
   </ItemGroup>
 
 </Project>

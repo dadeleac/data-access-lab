@@ -31,13 +31,4 @@ public static class ActiveIncidentListContract
         public const string Batched = "batched";
         public const string Projected = "projected";
     }
-
-    public static class Headers
-    {
-        public const string Strategy = "X-OpsBoard-Strategy";
-        public const string QueryCount = "X-OpsBoard-Db-Queries";
-        public const string QueryDuration = "X-OpsBoard-Db-Query-Duration-Ms";
-        public const string DataAccessElapsed = "X-OpsBoard-Data-Access-Elapsed-Ms";
-        public const string ServerTiming = "Server-Timing";
-    }
 }

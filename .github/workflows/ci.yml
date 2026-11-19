@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore tools and packages
+        run: |
+          dotnet tool restore
+          dotnet restore
+
+      - name: Build and test
+        run: |
+          dotnet build --no-restore
+          dotnet test --no-build --no-restore
+
+      - name: Run both laboratories with PostgreSQL in Aspire
+        run: |
+          dotnet dev-certs https --trust
+          export SSL_CERT_DIR="${SSL_CERT_DIR:-/etc/ssl/certs}:$HOME/.aspnet/dev-certs/trust"
+          bash .github/scripts/verify-scenarios.sh

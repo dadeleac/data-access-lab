@@ -32,6 +32,8 @@ builder.Services.AddScoped<IncidentListItemLoader>();
 builder.Services.AddScoped<PerIncidentEnrichmentQuery>();
 builder.Services.AddScoped<BatchedIncidentListQuery>();
 builder.Services.AddScoped<ProjectedIncidentListQuery>();
+builder.Services.AddScoped<SingleQueryIncidentDetailsQuery>();
+builder.Services.AddScoped<SplitQueryIncidentDetailsQuery>();
 
 var app = builder.Build();
 
@@ -45,6 +47,7 @@ app.MapGet(
     .ExcludeFromDescription();
 
 app.MapActiveIncidents();
+app.MapActiveIncidentDetails();
 app.MapDefaultEndpoints();
 
 app.Run();

@@ -25,6 +25,12 @@ public sealed record DatasetOptions
     public int Seed { get; set; }
     public DateTimeOffset ReferenceTime { get; set; }
     public string ModelVersion { get; set; } = string.Empty;
+    public bool Persist { get; set; } = true;
+
+    public bool IsReferenceDataset => Profile == SupportedProfile
+        && Seed == 1729
+        && ReferenceTime == new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)
+        && ModelVersion == "1";
 
     public void Validate()
     {

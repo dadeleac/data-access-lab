@@ -121,12 +121,19 @@ public sealed class DatasetInitializer(
     {
         var incidentCount = await dbContext.Incidents.CountAsync(cancellationToken);
         var updateCount = await dbContext.IncidentUpdates.CountAsync(cancellationToken);
+        var incidentTagCount = await dbContext.IncidentTags.CountAsync(cancellationToken);
 
-        if (incidentCount != 500 || updateCount != 4_000)
+        if (incidentCount != SmallDatasetFactory.IncidentCount
+            || updateCount != SmallDatasetFactory.UpdateCount
+            || incidentTagCount != SmallDatasetFactory.IncidentTagCount)
         {
             throw new InvalidOperationException(
                 "DatasetMetadata is present, but the stored small dataset is incomplete. "
-                + $"Expected 500 incidents and 4000 updates; found {incidentCount} and {updateCount}. "
+                + $"Expected {SmallDatasetFactory.IncidentCount} incidents, "
+                + $"{SmallDatasetFactory.UpdateCount} updates, and "
+                + $"{SmallDatasetFactory.IncidentTagCount} incident tag associations. "
+                + $"Found {incidentCount} incidents, {updateCount} updates, "
+                + $"and {incidentTagCount} incident tag associations. "
                 + "No data was changed.");
         }
     }
@@ -135,7 +142,8 @@ public sealed class DatasetInitializer(
         CancellationToken cancellationToken) =>
         await dbContext.Teams.AnyAsync(cancellationToken)
         || await dbContext.Users.AnyAsync(cancellationToken)
-        || await dbContext.Incidents.AnyAsync(cancellationToken);
+        || await dbContext.Tags.AnyAsync(cancellationToken)
+        || await dbContext.SlaPolicies.AnyAsync(cancellationToken);
 }
 
 public enum DatasetInitializationResult

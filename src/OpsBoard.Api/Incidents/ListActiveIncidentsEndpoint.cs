@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using OpsBoard.Api.Diagnostics;
 using OpsBoard.Api.Incidents.Queries;
@@ -10,9 +9,6 @@ namespace OpsBoard.Api.Incidents;
 
 public static class ListActiveIncidentsEndpoint
 {
-    private const string QueryTimingMetricName = "db-queries";
-    private const string DataAccessTimingMetricName = "data-access";
-
     public static IEndpointRouteBuilder MapActiveIncidents(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet(
@@ -53,55 +49,23 @@ public static class ListActiveIncidentsEndpoint
             return TypedResults.ValidationProblem(validationErrors);
         }
 
-        IIncidentListQuery query = request!.Strategy switch
+        (IIncidentListQuery Query, string StrategyName) selected = request!.Strategy switch
         {
-            IncidentListStrategy.PerIncident => perIncidentQuery,
-            IncidentListStrategy.Batched => batchedQuery,
-            IncidentListStrategy.Projected => projectedQuery,
+            IncidentListStrategy.PerIncident =>
+                (perIncidentQuery, ActiveIncidentListContract.Strategies.PerIncident),
+            IncidentListStrategy.Batched =>
+                (batchedQuery, ActiveIncidentListContract.Strategies.Batched),
+            IncidentListStrategy.Projected =>
+                (projectedQuery, ActiveIncidentListContract.Strategies.Projected),
             _ => throw new UnreachableException()
         };
 
         commandMetrics.Reset();
         var startedAt = timeProvider.GetTimestamp();
-        var items = await query.ExecuteAsync(request.Limit, cancellationToken);
+        var items = await selected.Query.ExecuteAsync(request.Limit, cancellationToken);
         var elapsed = timeProvider.GetElapsedTime(startedAt);
 
-        WriteMetricsHeaders(response, request.Strategy, commandMetrics, elapsed);
+        IncidentMetricsResponse.Write(response, selected.StrategyName, commandMetrics, elapsed);
         return TypedResults.Ok(items);
-    }
-
-    private static void WriteMetricsHeaders(
-        HttpResponse response,
-        IncidentListStrategy strategy,
-        DbCommandMetrics commandMetrics,
-        TimeSpan elapsed)
-    {
-        var queryExecutionMilliseconds = commandMetrics.Elapsed.TotalMilliseconds;
-        var dataAccessMilliseconds = elapsed.TotalMilliseconds;
-
-        response.Headers[ActiveIncidentListContract.Headers.Strategy] = strategy switch
-        {
-            IncidentListStrategy.PerIncident =>
-                ActiveIncidentListContract.Strategies.PerIncident,
-            IncidentListStrategy.Batched =>
-                ActiveIncidentListContract.Strategies.Batched,
-            IncidentListStrategy.Projected =>
-                ActiveIncidentListContract.Strategies.Projected,
-            _ => throw new UnreachableException()
-        };
-        response.Headers[ActiveIncidentListContract.Headers.QueryCount] =
-            commandMetrics.CommandCount
-            .ToString(CultureInfo.InvariantCulture);
-        response.Headers[ActiveIncidentListContract.Headers.QueryDuration] =
-            queryExecutionMilliseconds
-            .ToString("F2", CultureInfo.InvariantCulture);
-        response.Headers[ActiveIncidentListContract.Headers.DataAccessElapsed] =
-            dataAccessMilliseconds
-            .ToString("F2", CultureInfo.InvariantCulture);
-        response.Headers[ActiveIncidentListContract.Headers.ServerTiming] =
-            $"{QueryTimingMetricName};dur="
-            + $"{queryExecutionMilliseconds.ToString("F2", CultureInfo.InvariantCulture)}, "
-            + $"{DataAccessTimingMetricName};dur="
-            + dataAccessMilliseconds.ToString("F2", CultureInfo.InvariantCulture);
     }
 }
