@@ -28,10 +28,12 @@ var httpClient = httpClientFactory.CreateClient(OpsBoardResourceNames.Api);
 var activeIncidentList = new ActiveIncidentListScenario(httpClient, timeProvider);
 var activeIncidentDetails = new ActiveIncidentDetailsScenario(
     httpClient, timeProvider, datasetOptions?.IsReferenceDataset == true);
+var activeIncidentSummary = new ActiveIncidentSummaryScenario(httpClient, timeProvider);
 var report = new ScenarioRunReport(
     timeProvider.GetUtcNow(),
     await activeIncidentList.RunAsync(),
-    await activeIncidentDetails.RunAsync());
+    await activeIncidentDetails.RunAsync(),
+    await activeIncidentSummary.RunAsync());
 
 Console.WriteLine(JsonSerializer.Serialize(
     report,

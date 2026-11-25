@@ -1,7 +1,8 @@
 internal sealed record ScenarioRunReport(
     DateTimeOffset CapturedAt,
     ActiveIncidentListReport Lab01,
-    ActiveIncidentDetailsReport Lab02);
+    ActiveIncidentDetailsReport Lab02,
+    ActiveIncidentSummaryReport Lab03);
 
 internal sealed record ActiveIncidentListReport(
     string Scenario,
@@ -28,6 +29,23 @@ internal sealed record ActiveIncidentDetailsResult(
     int ItemCount,
     int QueryCount,
     long ExpectedStructuralRows,
+    double MedianQueryExecutionMilliseconds,
+    double MedianDataAccessMilliseconds,
+    string BodySha256);
+
+internal sealed record ActiveIncidentSummaryReport(
+    string Scenario,
+    DateTimeOffset CapturedAt,
+    IReadOnlyList<ActiveIncidentSummaryResult> Results);
+
+internal sealed record ActiveIncidentSummaryResult(
+    string Strategy,
+    int Limit,
+    int ItemCount,
+    int QueryCount,
+    int RowCount,
+    int ColumnCount,
+    int MaterializedEntityCount,
     double MedianQueryExecutionMilliseconds,
     double MedianDataAccessMilliseconds,
     string BodySha256);

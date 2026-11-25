@@ -34,7 +34,7 @@ jobs:
           dotnet build --no-restore
           dotnet test --no-build --no-restore
 
-      - name: Run both laboratories with PostgreSQL in Aspire
+      - name: Run all laboratories with PostgreSQL in Aspire
         run: |
           export SSL_CERT_DIR="${SSL_CERT_DIR:-/etc/ssl/certs}:$HOME/.aspnet/dev-certs/trust"
           dotnet dev-certs https --trust

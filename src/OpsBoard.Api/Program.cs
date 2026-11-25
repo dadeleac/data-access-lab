@@ -23,10 +23,13 @@ var connectionString = builder.Configuration
 
 builder.Services.AddScoped<DbCommandMetrics>();
 builder.Services.AddScoped<DbCommandMetricsInterceptor>();
+builder.Services.AddSingleton<IncidentSummaryMetricsInterceptor>();
 builder.Services.AddDbContext<OpsBoardDbContext>((services, options) =>
     options
         .UseNpgsql(connectionString)
-        .AddInterceptors(services.GetRequiredService<DbCommandMetricsInterceptor>()));
+        .AddInterceptors(
+            services.GetRequiredService<DbCommandMetricsInterceptor>(),
+            services.GetRequiredService<IncidentSummaryMetricsInterceptor>()));
 builder.EnrichNpgsqlDbContext<OpsBoardDbContext>();
 builder.Services.AddScoped<IncidentListItemLoader>();
 builder.Services.AddScoped<PerIncidentEnrichmentQuery>();
@@ -48,6 +51,7 @@ app.MapGet(
 
 app.MapActiveIncidents();
 app.MapActiveIncidentDetails();
+app.MapActiveIncidentSummaries();
 app.MapDefaultEndpoints();
 
 app.Run();

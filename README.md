@@ -16,6 +16,11 @@ Cada laboratorio devuelve el mismo cuerpo HTTP para todas sus estrategias. Los
 comandos se cuentan durante la ejecución. La cardinalidad estructural se calcula
 a partir de las colecciones de la respuesta del Laboratorio 02.
 
+El [Laboratorio 03](#laboratorio-03-la-entidad-completa-para-mostrar-ocho-campos)
+leyó 100 filas en un comando con cada estrategia. La carga de entidades completas
+seleccionó 27 columnas y creó 393 entidades de EF. La proyección seleccionó ocho
+columnas y creó directamente los resúmenes, con cero entidades de EF.
+
 ## Requisitos
 
 - .NET SDK 11 estable (11.0.100 o un parche posterior de esa banda)
@@ -183,7 +188,7 @@ y la muestra en los logs del recurso `scenario-runner`.
 
 `dotnet test` valida el contrato de entrada, la instrumentación, la forma del
 modelo, la generación determinista y el SQL de la consulta base. El
-`ScenarioRunner` valida los dos laboratorios por HTTP contra PostgreSQL. GitHub
+`ScenarioRunner` valida los laboratorios por HTTP contra PostgreSQL. GitHub
 Actions ejecuta las pruebas y arranca Aspire con una base nueva para exigir que
 el runner termine correctamente.
 
@@ -263,10 +268,41 @@ resultados dependen del proveedor, la versión de EF Core, la cardinalidad y la
 latencia. Este laboratorio es una demostración reproducible, no un benchmark
 definitivo; sus mediciones corresponden a este dataset y entorno.
 
-### Formato JSON del runner
+## Laboratorio 03: la entidad completa para mostrar ocho campos
 
-La raíz contiene `capturedAt` (inicio de la ejecución en UTC) y dos objetos,
-`lab01` y `lab02`. Cada objeto contiene `scenario` (nombre del escenario),
+El resumen de incidencias activas devuelve `number`, `title`, `status`,
+`severity`, `service`, `team`, `assignee` y `lastActivityAt`.
+Ambos caminos comparten filtro, orden, límite y el mismo mapeo al DTO. El
+responsable es opcional.
+
+```http
+GET /api/incidents/active/summary?strategy=full-entity&limit=50
+GET /api/incidents/active/summary?strategy=projected&limit=50
+```
+
+`full-entity` carga la incidencia, su servicio, su equipo y su responsable
+mediante `Include` y `AsNoTracking()`. Construye el DTO en memoria después de
+materializar las entidades. `projected`, la estrategia predeterminada, aplica
+el mismo mapeo con `Select` antes de ejecutar el SQL. Las dos consultas cargan
+referencias y devuelven una fila por incidencia.
+
+Además de las cabeceras comunes, el endpoint expone las filas del lector
+(`X-OpsBoard-Db-Rows`), sus columnas (`X-OpsBoard-Db-Columns`) y las instancias
+de entidades creadas por EF (`X-OpsBoard-Materialized-Entities`). El recuento
+de filas se toma al liberar el lector del Lab 03. EF Core 10 también cuenta la
+llamada final a `Read` que devuelve `false`, de modo que se descuenta esa
+llamada tras consumir el resultado completo.
+
+Con `--Scenarios:Run=true`, el runner comprueba un comando, una fila por
+incidencia, ocho campos JSON y el mismo SHA-256 para ambas estrategias en los
+límites `10`, `25`, `50` y `100`. La proyección debe recuperar ocho columnas y
+materializar cero entidades de EF. Los comentarios `TagWith` permiten comparar
+el SQL en las trazas de Aspire.
+
+## Formato JSON del runner
+
+La raíz contiene `capturedAt` (inicio de la ejecución en UTC) y los objetos
+`lab01`, `lab02` y `lab03`. Cada objeto contiene `scenario` (nombre del escenario),
 `capturedAt` (fin del escenario en UTC) y `results` (una entrada por estrategia y
 límite). Los consumidores del informe anterior deben cambiar `.results` por
 `.lab01.results` para leer el Laboratorio 01.
@@ -278,9 +314,16 @@ límite). Los consumidores del informe anterior deben cambiar `.results` por
 | `medianQueryExecutionMilliseconds`, `medianDataAccessMilliseconds` | Medianas de las tres muestras para eventos de ejecución de comandos y acceso a datos hasta materializar el resultado. |
 | `bodySha256` | SHA-256 del cuerpo HTTP, común a todas las muestras y estrategias del mismo límite. |
 | `expectedStructuralRows` | Cardinalidad estructural calculada a partir del cuerpo. Solo aparece en `lab02.results`. |
+| `rowCount`, `columnCount`, `materializedEntityCount` | Filas y columnas del lector e instancias de entidades creadas por EF. Solo aparecen en `lab03.results`. |
 
 Para extraer la comparación del Laboratorio 02 de un informe guardado:
 
 ```bash
 jq '.lab02.results[] | {strategy, limit, queryCount, expectedStructuralRows}' informe.json
+```
+
+### Métricas de lectura del Laboratorio 03
+
+```bash
+jq '.lab03.results[] | {strategy, limit, queryCount, rowCount, columnCount, materializedEntityCount}' informe.json
 ```
