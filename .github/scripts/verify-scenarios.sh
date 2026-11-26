@@ -31,7 +31,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 apphost_pid=$(aspire run --detach --format Json --isolated --no-build -- \
-    --Scenarios:Run=true --Dataset:Persist=false | jq -er '.appHostPid')
+    --Scenarios:Run=true --Dataset:Persist=false "$@" | jq -er '.appHostPid')
 
 deadline=$((SECONDS + 180))
 while (( SECONDS < deadline )); do

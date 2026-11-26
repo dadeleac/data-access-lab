@@ -4,6 +4,9 @@ public sealed record DatasetOptions
 {
     public const string ConfigurationSectionName = "Dataset";
     public const string SupportedProfile = "small";
+    public const string LargeProfile = "large";
+    public const int SmallUpdateCount = 4_000;
+    public const int LargeUpdateCount = 50_000;
 
     public DatasetOptions()
     {
@@ -27,6 +30,8 @@ public sealed record DatasetOptions
     public string ModelVersion { get; set; } = string.Empty;
     public bool Persist { get; set; } = true;
 
+    public int ExpectedUpdateCount => Profile == LargeProfile ? LargeUpdateCount : SmallUpdateCount;
+
     public bool IsReferenceDataset => Profile == SupportedProfile
         && Seed == 1729
         && ReferenceTime == new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)
@@ -34,11 +39,11 @@ public sealed record DatasetOptions
 
     public void Validate()
     {
-        if (!string.Equals(Profile, SupportedProfile, StringComparison.Ordinal))
+        if (Profile is not (SupportedProfile or LargeProfile))
         {
             throw new InvalidOperationException(
                 $"Dataset profile '{Profile}' is not available. "
-                + $"The current iteration supports only '{SupportedProfile}'.");
+                + $"Supported profiles are '{SupportedProfile}' and '{LargeProfile}'.");
         }
 
         if (ReferenceTime.Offset != TimeSpan.Zero)

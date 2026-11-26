@@ -25,7 +25,7 @@ public sealed class DatasetInitializer(
         if (metadata is not null)
         {
             EnsureMetadataMatches(options, metadata);
-            await EnsureStoredDatasetIsCompleteAsync(cancellationToken);
+            await EnsureStoredDatasetIsCompleteAsync(options, cancellationToken);
 
             logger.LogInformation(
                 "Dataset {Profile} already available. Seed: {Seed}; reference time: {ReferenceTime}; model version: {ModelVersion}.",
@@ -117,6 +117,7 @@ public sealed class DatasetInitializer(
             StringComparison.Ordinal);
 
     private async Task EnsureStoredDatasetIsCompleteAsync(
+        DatasetOptions options,
         CancellationToken cancellationToken)
     {
         var incidentCount = await dbContext.Incidents.CountAsync(cancellationToken);
@@ -124,13 +125,13 @@ public sealed class DatasetInitializer(
         var incidentTagCount = await dbContext.IncidentTags.CountAsync(cancellationToken);
 
         if (incidentCount != SmallDatasetFactory.IncidentCount
-            || updateCount != SmallDatasetFactory.UpdateCount
+            || updateCount != options.ExpectedUpdateCount
             || incidentTagCount != SmallDatasetFactory.IncidentTagCount)
         {
             throw new InvalidOperationException(
-                "DatasetMetadata is present, but the stored small dataset is incomplete. "
+                $"DatasetMetadata is present, but the stored {options.Profile} dataset is incomplete. "
                 + $"Expected {SmallDatasetFactory.IncidentCount} incidents, "
-                + $"{SmallDatasetFactory.UpdateCount} updates, and "
+                + $"{options.ExpectedUpdateCount} updates, and "
                 + $"{SmallDatasetFactory.IncidentTagCount} incident tag associations. "
                 + $"Found {incidentCount} incidents, {updateCount} updates, "
                 + $"and {incidentTagCount} incident tag associations. "

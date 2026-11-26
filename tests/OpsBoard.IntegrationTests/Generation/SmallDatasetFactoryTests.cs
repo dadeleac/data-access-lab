@@ -60,6 +60,16 @@ public sealed class SmallDatasetFactoryTests
         Assert.NotEqual(first, differentSeed);
     }
 
+    [Fact]
+    public void Large_profile_generates_fifty_thousand_updates_with_repeated_authors()
+    {
+        var dataset = new SmallDatasetFactory().Build(Options with { Profile = DatasetOptions.LargeProfile });
+
+        Assert.Equal(50_000, dataset.Updates.Count);
+        Assert.All(dataset.Incidents, incident => Assert.Equal(100, incident.Updates.Count));
+        Assert.Equal(145, dataset.Updates.Select(update => update.Author.Email).Distinct().Count());
+    }
+
     [Theory]
     [InlineData(1729)]
     [InlineData(1735)]

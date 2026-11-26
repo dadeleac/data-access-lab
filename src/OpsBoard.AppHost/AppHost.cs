@@ -3,6 +3,7 @@ using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.Configuration;
 using OpsBoard.Contracts.Configuration;
 using OpsBoard.Contracts.Hosting;
+using OpsBoard.Contracts.Http;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -16,6 +17,13 @@ var scenarioOptions = builder.Configuration
     .GetSection(ScenarioOptions.ConfigurationSectionName)
     .Get<ScenarioOptions>()
     ?? new ScenarioOptions();
+
+var measuredStrategy = scenarioOptions.Lab04Strategy;
+if (measuredStrategy is not null
+    && (!scenarioOptions.Run || !IncidentUpdateScanContract.SupportedStrategies.Contains(measuredStrategy)))
+{
+    throw new InvalidOperationException("Scenarios:Lab04Strategy requires Scenarios:Run and a supported strategy.");
+}
 
 var postgres = builder.AddPostgres(OpsBoardResourceNames.Postgres)
     .WithImageTag(OpsBoardResourceNames.PostgresImageTag);
@@ -41,14 +49,26 @@ var api = builder
     .WaitFor(database)
     .WaitForCompletion(dataGenerator);
 
+if (measuredStrategy is not null)
+{
+    api.WithEnvironment(
+        IncidentUpdateScanContract.MeasureMemoryConfigurationKey.Replace(":", "__", StringComparison.Ordinal), "true");
+}
+
 if (scenarioOptions.Run)
 {
-    builder.AddDotnetProject(
+    var scenarioRunner = builder.AddDotnetProject(
             OpsBoardResourceNames.ScenarioRunner,
             "../OpsBoard.ScenarioRunner/OpsBoard.ScenarioRunner.csproj")
         .WithReference(api)
         .WithEnvironment(ConfigureDataset)
         .WaitFor(api);
+
+    if (measuredStrategy is not null)
+    {
+        scenarioRunner.WithEnvironment(
+            $"{ScenarioOptions.ConfigurationSectionName}__{nameof(ScenarioOptions.Lab04Strategy)}", measuredStrategy);
+    }
 }
 
 builder.Build().Run();

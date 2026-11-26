@@ -8,7 +8,6 @@ public sealed class SmallDatasetFactory
 {
     internal const int IncidentCount = 500;
     internal const int IncidentTagCount = 1_100;
-    internal const int UpdateCount = 4_000;
     private const int PauseCount = 100;
 
     private static readonly string[] TeamNames =
@@ -110,7 +109,9 @@ public sealed class SmallDatasetFactory
             (IncidentSeverity.High, 75),
             (IncidentSeverity.Critical, 25));
         var assignees = CreateAssigneeAssignments(users, random);
-        var updateCounts = CreateQuota(random, (0, 50), (5, 40), (7, 400), (100, 10));
+        var updateCounts = options.Profile == DatasetOptions.LargeProfile
+            ? Enumerable.Repeat(DatasetOptions.LargeUpdateCount / IncidentCount, IncidentCount).ToList()
+            : CreateQuota(random, (0, 50), (5, 40), (7, 400), (100, 10));
         var tagCounts = CreateQuota(
             random,
             (0, 50),
@@ -122,7 +123,7 @@ public sealed class SmallDatasetFactory
 
         var incidents = new List<Incident>(IncidentCount);
         var incidentTags = new List<IncidentTag>(IncidentTagCount);
-        var updates = new List<IncidentUpdate>(UpdateCount);
+        var updates = new List<IncidentUpdate>(options.ExpectedUpdateCount);
         var pauses = new List<IncidentPause>(PauseCount);
         var statusChanges = new List<IncidentStatusChange>(1_440);
 

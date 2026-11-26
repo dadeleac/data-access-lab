@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using OpsBoard.Api.Diagnostics;
@@ -25,7 +24,7 @@ internal static class ListActiveIncidentSummariesEndpoint
         [Description(ActiveIncidentSummaryContract.LimitParameterDescription)] int? limit,
         OpsBoardDbContext dbContext,
         DbCommandMetrics commandMetrics,
-        IncidentSummaryMetricsInterceptor shapeInterceptor,
+        QueryShapeMetricsInterceptor shapeInterceptor,
         TimeProvider timeProvider,
         HttpResponse response,
         CancellationToken cancellationToken)
@@ -64,18 +63,8 @@ internal static class ListActiveIncidentSummariesEndpoint
                     .ToListAsync(cancellationToken);
             var elapsed = timeProvider.GetElapsedTime(startedAt);
 
-            if (shape.RowCount is not int rowCount || shape.ColumnCount is not int columnCount)
-            {
-                throw new InvalidOperationException("The incident summary query did not yield reader metrics.");
-            }
-
             IncidentMetricsResponse.Write(response, selectedStrategy, commandMetrics, elapsed);
-            response.Headers[ActiveIncidentSummaryContract.Headers.RowCount] =
-                rowCount.ToString(CultureInfo.InvariantCulture);
-            response.Headers[ActiveIncidentSummaryContract.Headers.ColumnCount] =
-                columnCount.ToString(CultureInfo.InvariantCulture);
-            response.Headers[ActiveIncidentSummaryContract.Headers.MaterializedEntityCount] =
-                shape.MaterializedEntityCount.ToString(CultureInfo.InvariantCulture);
+            IncidentMetricsResponse.WriteQueryShape(response, shape);
 
             return TypedResults.Ok(items);
         }

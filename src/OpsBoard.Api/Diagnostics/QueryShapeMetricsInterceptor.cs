@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace OpsBoard.Api.Diagnostics;
 
-internal sealed class IncidentSummaryMetricsInterceptor : DbCommandInterceptor, IMaterializationInterceptor
+internal sealed class QueryShapeMetricsInterceptor : DbCommandInterceptor, IMaterializationInterceptor
 {
-    private readonly ConditionalWeakTable<DbContext, IncidentSummaryMetrics> activeMeasurements = new();
+    private readonly ConditionalWeakTable<DbContext, QueryShapeMetrics> activeMeasurements = new();
 
-    public IncidentSummaryMetrics Start(DbContext dbContext)
+    public QueryShapeMetrics Start(DbContext dbContext)
     {
-        var metrics = new IncidentSummaryMetrics();
+        var metrics = new QueryShapeMetrics();
         activeMeasurements.Add(dbContext, metrics);
         return metrics;
     }
@@ -39,7 +39,7 @@ internal sealed class IncidentSummaryMetricsInterceptor : DbCommandInterceptor, 
     {
         if (eventData.Context is { } dbContext && activeMeasurements.TryGetValue(dbContext, out var metrics))
         {
-            // Both lab queries fully enumerate one reader. EF counts the final read that returns false.
+            // The measured queries fully enumerate one reader. EF counts the final read that returns false.
             metrics.RowCount = eventData.ReadCount - 1;
         }
 
@@ -57,7 +57,7 @@ internal sealed class IncidentSummaryMetricsInterceptor : DbCommandInterceptor, 
     }
 }
 
-internal sealed class IncidentSummaryMetrics
+internal sealed class QueryShapeMetrics
 {
     public int? RowCount { get; set; }
     public int? ColumnCount { get; set; }

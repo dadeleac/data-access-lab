@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 internal sealed record ScenarioRunReport(
     DateTimeOffset CapturedAt,
     ActiveIncidentListReport Lab01,
     ActiveIncidentDetailsReport Lab02,
-    ActiveIncidentSummaryReport Lab03);
+    ActiveIncidentSummaryReport Lab03,
+    IncidentUpdateScanReport Lab04);
 
 internal sealed record ActiveIncidentListReport(
     string Scenario,
@@ -49,3 +52,28 @@ internal sealed record ActiveIncidentSummaryResult(
     double MedianQueryExecutionMilliseconds,
     double MedianDataAccessMilliseconds,
     string BodySha256);
+
+internal sealed record IncidentUpdateScanReport(
+    string Scenario,
+    DateTimeOffset CapturedAt,
+    IReadOnlyList<IncidentUpdateScanMeasurement> Results);
+
+internal sealed record IncidentUpdateScanMeasurement(
+    string Strategy,
+    int Limit,
+    int ItemCount,
+    int DistinctAuthorCount,
+    int QueryCount,
+    int RowCount,
+    int ColumnCount,
+    int MaterializedEntityCount,
+    int TrackedEntries,
+    double MedianQueryExecutionMilliseconds,
+    double MedianDataAccessMilliseconds,
+    string BodySha256,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IncidentUpdateScanMemory? Memory);
+
+internal sealed record IncidentUpdateScanMemory(
+    long MedianAllocatedBytes,
+    long MedianBaselineManagedBytes,
+    long MedianPeakManagedBytes);

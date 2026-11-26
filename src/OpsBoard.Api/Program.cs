@@ -23,14 +23,15 @@ var connectionString = builder.Configuration
 
 builder.Services.AddScoped<DbCommandMetrics>();
 builder.Services.AddScoped<DbCommandMetricsInterceptor>();
-builder.Services.AddSingleton<IncidentSummaryMetricsInterceptor>();
-builder.Services.AddDbContext<OpsBoardDbContext>((services, options) =>
-    options
-        .UseNpgsql(connectionString)
-        .AddInterceptors(
-            services.GetRequiredService<DbCommandMetricsInterceptor>(),
-            services.GetRequiredService<IncidentSummaryMetricsInterceptor>()));
+builder.Services.AddSingleton<QueryShapeMetricsInterceptor>();
+builder.Services.AddDbContext<OpsBoardDbContext>(ConfigureDbContext);
 builder.EnrichNpgsqlDbContext<OpsBoardDbContext>();
+builder.Services.AddKeyedScoped<OpsBoardDbContext>(ScanIncidentUpdatesEndpoint.DbContextKey, (services, _) =>
+{
+    var options = new DbContextOptionsBuilder<OpsBoardDbContext>();
+    ConfigureDbContext(services, options);
+    return new OpsBoardDbContext(options.Options);
+});
 builder.Services.AddScoped<IncidentListItemLoader>();
 builder.Services.AddScoped<PerIncidentEnrichmentQuery>();
 builder.Services.AddScoped<BatchedIncidentListQuery>();
@@ -52,8 +53,16 @@ app.MapGet(
 app.MapActiveIncidents();
 app.MapActiveIncidentDetails();
 app.MapActiveIncidentSummaries();
+app.MapIncidentUpdateScan();
 app.MapDefaultEndpoints();
 
 app.Run();
+
+void ConfigureDbContext(IServiceProvider services, DbContextOptionsBuilder options)
+{
+    options.UseNpgsql(connectionString).AddInterceptors(
+        services.GetRequiredService<DbCommandMetricsInterceptor>(),
+        services.GetRequiredService<QueryShapeMetricsInterceptor>());
+}
 
 public partial class Program;

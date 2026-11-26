@@ -11,6 +11,9 @@ var builder = Host.CreateApplicationBuilder(args);
 var datasetOptions = builder.Configuration
     .GetSection(DatasetOptions.ConfigurationSectionName)
     .Get<DatasetOptions>();
+var scenarioOptions = builder.Configuration
+    .GetSection(ScenarioOptions.ConfigurationSectionName)
+    .Get<ScenarioOptions>();
 
 builder.AddServiceDefaults();
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -29,11 +32,16 @@ var activeIncidentList = new ActiveIncidentListScenario(httpClient, timeProvider
 var activeIncidentDetails = new ActiveIncidentDetailsScenario(
     httpClient, timeProvider, datasetOptions?.IsReferenceDataset == true);
 var activeIncidentSummary = new ActiveIncidentSummaryScenario(httpClient, timeProvider);
-var report = new ScenarioRunReport(
-    timeProvider.GetUtcNow(),
-    await activeIncidentList.RunAsync(),
-    await activeIncidentDetails.RunAsync(),
-    await activeIncidentSummary.RunAsync());
+var incidentUpdateScan = new IncidentUpdateScanScenario(httpClient, timeProvider);
+var updateCount = datasetOptions?.ExpectedUpdateCount ?? DatasetOptions.SmallUpdateCount;
+object report = scenarioOptions?.Lab04Strategy is { } strategy
+    ? new { Lab04 = await incidentUpdateScan.RunAsync(updateCount, strategy) }
+    : new ScenarioRunReport(
+        timeProvider.GetUtcNow(),
+        await activeIncidentList.RunAsync(),
+        await activeIncidentDetails.RunAsync(),
+        await activeIncidentSummary.RunAsync(),
+        await incidentUpdateScan.RunAsync(updateCount));
 
 Console.WriteLine(JsonSerializer.Serialize(
     report,

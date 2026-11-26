@@ -5,6 +5,19 @@ namespace OpsBoard.Api.Diagnostics;
 
 internal static class IncidentMetricsResponse
 {
+    public static void WriteQueryShape(HttpResponse response, QueryShapeMetrics shape)
+    {
+        if (shape.RowCount is not int rowCount || shape.ColumnCount is not int columnCount)
+        {
+            throw new InvalidOperationException("The query did not yield reader metrics.");
+        }
+
+        response.Headers[IncidentMetricsHeaders.RowCount] = rowCount.ToString(CultureInfo.InvariantCulture);
+        response.Headers[IncidentMetricsHeaders.ColumnCount] = columnCount.ToString(CultureInfo.InvariantCulture);
+        response.Headers[IncidentMetricsHeaders.MaterializedEntityCount] =
+            shape.MaterializedEntityCount.ToString(CultureInfo.InvariantCulture);
+    }
+
     public static void Write(
         HttpResponse response,
         string strategy,

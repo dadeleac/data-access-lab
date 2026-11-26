@@ -24,8 +24,8 @@ public static class ActiveIncidentSummaryContract
 
     public static class Headers
     {
-        public const string RowCount = "X-OpsBoard-Db-Rows";
-        public const string ColumnCount = "X-OpsBoard-Db-Columns";
-        public const string MaterializedEntityCount = "X-OpsBoard-Materialized-Entities";
+        public const string RowCount = IncidentMetricsHeaders.RowCount;
+        public const string ColumnCount = IncidentMetricsHeaders.ColumnCount;
+        public const string MaterializedEntityCount = IncidentMetricsHeaders.MaterializedEntityCount;
     }
 }

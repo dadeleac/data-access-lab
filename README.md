@@ -2,7 +2,9 @@
 
 Laboratorio incremental para observar el comportamiento de Entity Framework Core y estudiar cuándo una operación necesita otro nivel de control.
 
-## Resultados con 100 incidencias activas
+## Resultados de los laboratorios
+
+Los tres primeros laboratorios se verificaron con 100 incidencias activas.
 
 | Laboratorio | Estrategia | Comandos SQL | Cardinalidad estructural |
 | --- | --- | ---: | ---: |
@@ -20,6 +22,11 @@ El [Laboratorio 03](#laboratorio-03-la-entidad-completa-para-mostrar-ocho-campos
 leyó 100 filas en un comando con cada estrategia. La carga de entidades completas
 seleccionó 27 columnas y creó 393 entidades de EF. La proyección seleccionó ocho
 columnas y creó directamente los resúmenes, con cero entidades de EF.
+
+El [Laboratorio 04](#laboratorio-04-el-endpoint-de-lectura-que-llenó-la-memoria)
+recorrió 50.000 actualizaciones con un comando y el mismo JSON en cada estrategia.
+Con `AsNoTracking()`, el pico de heap observado fue de 20,3 MiB al recorrer las
+filas con `await foreach` y de 119,8 MiB al acumularlas con `ToListAsync()`.
 
 ## Requisitos
 
@@ -94,7 +101,9 @@ El siguiente arranque volverá a aplicar las migraciones y generar los datos.
 La opción `--Dataset:Persist=false` arranca PostgreSQL con almacenamiento
 temporal y permite repetir la prueba con datos nuevos, como hace CI.
 
-Los perfiles adicionales se documentarán cuando su diseño quede validado.
+El perfil `large` conserva 500 incidencias y genera 50.000 actualizaciones
+deterministas para el Laboratorio 04. Usa el volumen `opsboard-large-data`
+cuando se activa la persistencia.
 
 ## Laboratorio 01: round trips ocultos
 
@@ -299,22 +308,103 @@ límites `10`, `25`, `50` y `100`. La proyección debe recuperar ocho columnas y
 materializar cero entidades de EF. Los comentarios `TagWith` permiten comparar
 el SQL en las trazas de Aspire.
 
+## Laboratorio 04: el endpoint de lectura que llenó la memoria
+
+El endpoint `GET /api/incident-updates/scan` recorre actualizaciones por `Id` e
+incluye el autor de cada una. Acepta `strategy` y un `limit` entre `1` y `50000`.
+Por defecto usa `no-tracking` con un límite de `1000`. Cada estrategia devuelve
+un recuento, el número de autores distintos y una huella SHA-256 de sus
+identificadores, el tipo de actualización y su fecha en UTC.
+
+| Estrategia | Modo de EF Core | Consumo de los resultados |
+| --- | --- | --- |
+| `tracking` | `AsTracking()` | `await foreach` |
+| `no-tracking` | `AsNoTracking()` | `await foreach` |
+| `identity-resolution` | `AsNoTrackingWithIdentityResolution()` | `await foreach` |
+| `buffered` | `AsNoTracking()` | `ToListAsync()` |
+
+Las tres primeras variantes aíslan el tracking y la resolución de identidad.
+`no-tracking` y `buffered` aíslan el efecto de retener la lista. Todas ejecutan el
+mismo SQL y usan un contexto nuevo sin reintentos, ya que los reintentos de EF
+Core pueden acumular internamente las filas de una consulta.
+
+El runner valida un comando, una fila por actualización y un cuerpo idéntico
+por límite. Si se leen `N` actualizaciones con `A` autores distintos,
+`tracking` e `identity-resolution` materializan `N + A` entidades. Las otras
+dos estrategias materializan `2N`. Solo `tracking` conserva entradas en el
+`ChangeTracker` del contexto al terminar el recorrido. `identity-resolution`
+mantiene su propio registro de entidades durante la enumeración para reutilizar
+la instancia de cada autor.
+
+### Medir con el perfil large
+
+Desde la raíz del repositorio, compila en Release y ejecuta el mismo script
+que usa CI una vez por estrategia. Cada invocación arranca un proceso de API
+nuevo y ejecuta el Lab 04 con 1.000, 10.000 y 50.000 filas. La ejecución normal
+de CI usa `small` y comprueba las invariantes con 1.000 y 4.000 filas.
+El directorio temporal evita que Aspire reutilice la ruta a un AppHost de
+Debug guardada en la caché de una ejecución anterior.
+
+```bash
+dotnet build -c Release
+(
+  set -e
+  export ASPIRE_HOME="$(mktemp -d)"
+  export Configuration=Release
+  for strategy in tracking no-tracking identity-resolution buffered; do
+    bash .github/scripts/verify-scenarios.sh --Dataset:Profile=large \
+      "--Scenarios:Lab04Strategy=$strategy"
+  done
+)
+```
+
+El informe recoge la mediana de tres muestras después de una petición de
+calentamiento por límite. Los bytes asignados y el heap administrado son
+observaciones del proceso de API. El heap se muestrea cada 10 ms, al comenzar
+y terminar la operación, y justo después de llenar la lista en `buffered`.
+La duración de acceso incluye el recorrido y el cálculo de la huella. Las
+mediciones dependen del entorno y de las colecciones del GC.
+
+### Resultados con 50.000 actualizaciones
+
+Medición local en Release, en macOS arm64 con .NET SDK 11.0.100, Aspire 17 y
+PostgreSQL 18. Para cada límite, las cuatro estrategias devolvieron el mismo
+JSON con un comando y 10 columnas. A 50.000 filas, las cuatro recorrieron 145
+autores distintos.
+
+| Estrategia | Entidades materializadas | Entradas en el contexto al terminar | Bytes asignados (MiB) | Heap inicial (MiB) | Pico de heap observado (MiB) | Acceso y recorrido (ms) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `tracking` | 50.145 | 50.145 | 171,0 | 89,6 | 117,8 | 366,49 |
+| `no-tracking` | 100.000 | 0 | 221,0 | 17,4 | 20,3 | 272,99 |
+| `identity-resolution` | 50.145 | 0 | 187,4 | 76,4 | 134,7 | 284,17 |
+| `buffered` | 100.000 | 0 | 222,0 | 77,5 | 119,8 | 318,72 |
+
+`no-tracking` y `buffered` asignaron cantidades parecidas y materializaron el
+mismo número de entidades. Al recorrer las filas sin acumularlas en una lista,
+el GC pudo recuperar objetos durante la lectura. La resolución de identidad
+evitó materializar 49.855 instancias de autor repetidas y mantuvo su registro
+temporal durante el recorrido.
+
 ## Formato JSON del runner
 
-La raíz contiene `capturedAt` (inicio de la ejecución en UTC) y los objetos
-`lab01`, `lab02` y `lab03`. Cada objeto contiene `scenario` (nombre del escenario),
-`capturedAt` (fin del escenario en UTC) y `results` (una entrada por estrategia y
-límite). Los consumidores del informe anterior deben cambiar `.results` por
-`.lab01.results` para leer el Laboratorio 01.
+En la ejecución normal, la raíz contiene `capturedAt` (inicio de la ejecución
+en UTC) y los objetos `lab01`, `lab02`, `lab03` y `lab04`. Con
+`Scenarios:Lab04Strategy`, la raíz contiene solo `lab04`. Cada objeto de
+laboratorio contiene `scenario` (nombre del escenario), `capturedAt` (fin del
+escenario en UTC) y `results` (una entrada por estrategia y límite). Los
+consumidores del informe original del Laboratorio 01 deben cambiar `.results`
+por `.lab01.results`.
 
 | Campo de `results` | Significado |
 | --- | --- |
 | `strategy`, `limit` | Estrategia y límite solicitados. |
-| `itemCount`, `queryCount` | Número de incidencias y comandos SQL validados en cada muestra. |
+| `itemCount`, `queryCount` | Número de elementos devueltos o recorridos y comandos SQL validados en cada muestra. |
 | `medianQueryExecutionMilliseconds`, `medianDataAccessMilliseconds` | Medianas de las tres muestras para eventos de ejecución de comandos y acceso a datos hasta materializar el resultado. |
 | `bodySha256` | SHA-256 del cuerpo HTTP, común a todas las muestras y estrategias del mismo límite. |
 | `expectedStructuralRows` | Cardinalidad estructural calculada a partir del cuerpo. Solo aparece en `lab02.results`. |
-| `rowCount`, `columnCount`, `materializedEntityCount` | Filas y columnas del lector e instancias de entidades creadas por EF. Solo aparecen en `lab03.results`. |
+| `rowCount`, `columnCount`, `materializedEntityCount` | Filas y columnas del lector e instancias de entidades creadas por EF. Aparecen en `lab03.results` y `lab04.results`. |
+| `distinctAuthorCount`, `trackedEntries` | Autores distintos y entradas retenidas en el contexto al terminar el Lab 04. |
+| `memory` | `medianAllocatedBytes`, `medianBaselineManagedBytes` y `medianPeakManagedBytes`. Solo aparece en el Lab 04 con `Scenarios:Lab04Strategy`. |
 
 Para extraer la comparación del Laboratorio 02 de un informe guardado:
 
@@ -326,4 +416,10 @@ jq '.lab02.results[] | {strategy, limit, queryCount, expectedStructuralRows}' in
 
 ```bash
 jq '.lab03.results[] | {strategy, limit, queryCount, rowCount, columnCount, materializedEntityCount}' informe.json
+```
+
+### Métricas de lectura del Laboratorio 04
+
+```bash
+jq '.lab04.results[] | {strategy, limit, materializedEntityCount, trackedEntries, memory}' informe.json
 ```
